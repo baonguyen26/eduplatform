@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-quicksand);
+  --font-display-primary: var(--font-baloo-2);
+  --font-display-secondary: var(--font-quicksand);
+
+  /* Mastery Colors */
+  --color-mastery-unseen: var(--color-slate-200);
+  --color-mastery-exploring: var(--color-amber-400);
+  --color-mastery-practicing: var(--color-blue-500);
+  --color-mastery-mastered: var(--color-emerald-600);
+
+  /* Subject Colors */
+  --color-subject-math: var(--color-indigo-600);
+  --color-subject-language: var(--color-rose-600);
+
+  /* Brand Colors */
+  --color-brand-bg: var(--color-slate-50);
+
+  /* Adaptive Radius */
+  --radius-primary: 24px;
+  --radius-secondary: 12px;
+
+  /* Custom Shadows */
+  --shadow-soft: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+:root {
+  --background: #f8fafc;
+  /* Slate 50 */
+  --foreground: #0f172a;
+  /* Slate 900 */
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-quicksand), sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+[data-level="primary"] {
+  --radius-adaptive: var(--radius-primary);
+  --font-adaptive-display: var(--font-display-primary);
+}
+
+[data-level="secondary"] {
+  --radius-adaptive: var(--radius-secondary);
+  --font-adaptive-display: var(--font-display-secondary);
+}
