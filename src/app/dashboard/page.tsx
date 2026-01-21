@@ -1,207 +1,229 @@
-"use client";
+'use client'
 
-import React, { useState } from "react";
-import Image from "next/image";
-import {
-    BarChart3,
-    Map as MapIcon,
-    BookOpen,
-    Users,
-    GraduationCap,
-    Bell,
-    Settings,
-    Menu,
-    X,
-    UserCircle,
-    Trophy
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { useEffect, useState } from 'react'
+import { getRecentCourses, getUserStats } from './actions'
+import { motion } from 'framer-motion'
+import { BookOpen, Award, Clock, TrendingUp, Play, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
 
-// Import core components
-import KnowledgeMap from "@/components/KnowledgeMap";
-import LessonTemplate from "@/components/LessonTemplate";
-import MasteryTracker from "@/components/MasteryTracker";
-import DiagnosticInterface from "@/components/DiagnosticInterface";
-import TutorDashboard from "@/components/TutorDashboard";
-import ParentView from "@/components/ParentView";
-
-function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
+interface Course {
+    id: string
+    title: string
+    thumbnail_url: string | null
+    progress: number
+    total_lessons: number
+    completed_lessons: number
+    last_lesson_id?: string
 }
 
-type Role = "student" | "tutor" | "parent";
-type Level = "primary" | "secondary";
-type Tab = "map" | "lesson" | "tracker" | "diagnostic" | "management";
+interface UserStats {
+    completed_lessons: number
+    courses_started: number
+    total_study_time: number
+}
 
-export default function Dashboard() {
-    const [role, setRole] = useState<Role>("student");
-    const [level, setLevel] = useState<Level>("primary");
-    const [activeTab, setActiveTab] = useState<Tab>("map");
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+export default function DashboardPage() {
+    const [recentCourses, setRecentCourses] = useState<Course[]>([])
+    const [stats, setStats] = useState<UserStats | null>(null)
+    const [loading, setLoading] = useState(true)
 
-    // Dữ liệu mẫu cho Bản đồ kiến thức
-    const mathPoints = [
-        { id: "1", title: "Số tự nhiên", state: "mastered" as const, position: { x: 50, y: 100 } },
-        { id: "2", title: "Phép cộng", state: "mastered" as const, position: { x: 150, y: 200 } },
-        { id: "3", title: "Phép trừ", state: "practicing" as const, position: { x: 300, y: 150 } },
-        { id: "4", title: "Giá trị hàng số", state: "exploring" as const, position: { x: 450, y: 250 } },
-        { id: "5", title: "Phép nhân", state: "unseen" as const, position: { x: 600, y: 150 } },
-    ];
+    useEffect(() => {
+        Promise.all([
+            getRecentCourses(3),
+            getUserStats()
+        ]).then(([courses, userStats]) => {
+            setRecentCourses(courses as any)
+            setStats(userStats)
+            setLoading(false)
+        })
+    }, [])
 
-    const navigation = [
-        { id: "map", label: "Bản đồ Kiến thức", icon: <MapIcon className="w-5 h-5" />, roles: ["student"] },
-        { id: "tracker", label: "Tiến độ Làm chủ", icon: <BarChart3 className="w-5 h-5" />, roles: ["student", "parent"] },
-        { id: "lesson", label: "Bài học hiện tại", icon: <BookOpen className="w-5 h-5" />, roles: ["student"] },
-        { id: "diagnostic", label: "Chẩn đoán", icon: <Trophy className="w-5 h-5" />, roles: ["student"] },
-        { id: "management", label: "Bảng điều khiển", icon: <GraduationCap className="w-5 h-5" />, roles: ["tutor", "parent"] },
-    ];
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
+                <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+        )
+    }
 
     return (
-        <div
-            data-level={level}
-            className="min-h-screen bg-brand-bg flex"
-        >
-            {/* Sidebar */}
-            <aside className={cn(
-                "bg-white border-r border-slate-200 transition-all duration-300 z-50 fixed md:static inset-y-0 left-0",
-                isSidebarOpen ? "w-64" : "w-20",
-                !isSidebarOpen && "md:w-20",
-                "hidden md:flex flex-col"
-            )}>
-                <div className="p-6 flex items-center gap-3">
-                    <div className="w-8 h-8 bg-white rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden shadow-sm">
-                        <Image
-                            src="/assets/logo.png"
-                            alt="EduPlatform Logo"
-                            width={32}
-                            height={32}
-                            className="object-cover"
-                        />
-                    </div>
-                    {isSidebarOpen && <span className="font-adaptive-display text-xl font-bold tracking-tight text-slate-800">EduPlatform</span>}
-                </div>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+            {/* Decorative Background */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden">
+                <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-yellow-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30" />
+                <div className="absolute top-[20%] left-[-5%] w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30" />
+                <div className="absolute bottom-[-10%] right-[20%] w-96 h-96 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30" />
+            </div>
 
-                <nav className="flex-1 px-4 py-6 space-y-1">
-                    {navigation.filter(item => item.roles.includes(role)).map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => setActiveTab(item.id as Tab)}
-                            className={cn(
-                                "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all group cursor-pointer",
-                                activeTab === item.id
-                                    ? "bg-blue-50 text-blue-600 shadow-sm"
-                                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                            )}
+            <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                {/* Welcome Header */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-12"
+                >
+                    <h1 className="text-5xl lg:text-6xl font-adaptive-display font-extrabold text-slate-900 mb-4">
+                        Chào mừng trở lại! 👋
+                    </h1>
+                    <p className="text-xl text-slate-600 font-medium font-sans">
+                        Sẵn sàng tiếp tục hành trình học tập của bạn?
+                    </p>
+                </motion.div>
+
+                {/* Stats Cards */}
+                {stats && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 }}
+                            className="bg-white rounded-[2rem] p-6 shadow-lg shadow-blue-500/10 border-4 border-white ring-4 ring-blue-50"
                         >
-                            <div className={cn(
-                                "transition-colors",
-                                activeTab === item.id ? "text-blue-600" : "group-hover:text-blue-600"
-                            )}>
-                                {item.icon}
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center">
+                                    <BookOpen className="w-7 h-7 text-blue-600" />
+                                </div>
+                                <div>
+                                    <p className="text-3xl font-bold text-slate-900">{stats.completed_lessons}</p>
+                                    <p className="text-sm text-slate-600 font-medium">Bài học hoàn thành</p>
+                                </div>
                             </div>
-                            {isSidebarOpen && <span className="font-semibold text-sm">{item.label}</span>}
-                        </button>
-                    ))}
-                </nav>
+                        </motion.div>
 
-                <div className="p-4 border-t border-slate-100 mt-auto">
-                    <button className="flex items-center gap-3 px-3 py-3 w-full text-slate-500 hover:bg-slate-50 rounded-xl transition-all cursor-pointer">
-                        <Settings className="w-5 h-5" />
-                        {isSidebarOpen && <span className="font-semibold text-sm">Cài đặt</span>}
-                    </button>
-                </div>
-            </aside>
-
-            {/* Main Content */}
-            <main className="flex-1 flex flex-col h-screen overflow-hidden">
-                {/* Top Navbar */}
-                <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-40">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                            className="p-2 hover:bg-slate-100 rounded-lg md:block hidden cursor-pointer"
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="bg-white rounded-[2rem] p-6 shadow-lg shadow-green-500/10 border-4 border-white ring-4 ring-green-50"
                         >
-                            <Menu className="w-5 h-5 text-slate-500" />
-                        </button>
-                        <div className="flex bg-slate-100 p-1 rounded-full border border-slate-200">
-                            {([["student", "Học sinh"], ["tutor", "Gia sư"], ["parent", "Phụ huynh"]] as [Role, string][]).map(([r, label]) => (
-                                <button
-                                    key={r}
-                                    onClick={() => {
-                                        setRole(r);
-                                        if (r === "tutor" || r === "parent") setActiveTab("management");
-                                        else setActiveTab("map");
-                                    }}
-                                    className={cn(
-                                        "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer",
-                                        role === r ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
-                                    )}
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center">
+                                    <TrendingUp className="w-7 h-7 text-green-600" />
+                                </div>
+                                <div>
+                                    <p className="text-3xl font-bold text-slate-900">{stats.courses_started}</p>
+                                    <p className="text-sm text-slate-600 font-medium">Khóa học đang học</p>
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 }}
+                            className="bg-white rounded-[2rem] p-6 shadow-lg shadow-indigo-500/10 border-4 border-white ring-4 ring-indigo-50"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 bg-indigo-100 rounded-2xl flex items-center justify-center">
+                                    <Clock className="w-7 h-7 text-indigo-600" />
+                                </div>
+                                <div>
+                                    <p className="text-3xl font-bold text-slate-900">{stats.total_study_time}</p>
+                                    <p className="text-sm text-slate-600 font-medium">Phút học tập</p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+
+                {/* Recent Courses */}
+                {recentCourses.length > 0 ? (
+                    <div className="mb-12">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-3xl font-adaptive-display font-bold text-slate-900">
+                                Tiếp tục học
+                            </h2>
+                            <Link href="/courses" className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-bold">
+                                Xem tất cả
+                                <ArrowRight className="w-5 h-5" />
+                            </Link>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {recentCourses.map((course, index) => (
+                                <motion.div
+                                    key={course.id}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.4 + index * 0.1 }}
+                                    whileHover={{ scale: 1.02, y: -5 }}
+                                    className="bg-white rounded-[2rem] overflow-hidden shadow-lg shadow-blue-500/10 border-4 border-white ring-4 ring-blue-50 cursor-pointer"
                                 >
-                                    {label}
-                                </button>
+                                    <Link href={`/learn/${course.last_lesson_id || ''}`}>
+                                        {/* Thumbnail */}
+                                        <div className="relative aspect-video bg-gradient-to-br from-blue-100 to-indigo-100">
+                                            {course.thumbnail_url ? (
+                                                <img
+                                                    src={course.thumbnail_url}
+                                                    alt={course.title}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center">
+                                                    <BookOpen className="w-16 h-16 text-indigo-300" />
+                                                </div>
+                                            )}
+
+                                            {/* Play Overlay */}
+                                            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                                <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center">
+                                                    <Play className="w-8 h-8 text-indigo-600 fill-indigo-600 ml-1" />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Content */}
+                                        <div className="p-6">
+                                            <h3 className="text-xl font-bold text-slate-900 mb-3 line-clamp-2">
+                                                {course.title}
+                                            </h3>
+
+                                            {/* Progress */}
+                                            <div className="mb-4">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="text-xs font-bold text-slate-600">Tiến độ</span>
+                                                    <span className="text-xs font-bold text-indigo-600">{Math.round(course.progress)}%</span>
+                                                </div>
+                                                <div className="h-3 rounded-full bg-slate-100 overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full"
+                                                        style={{ width: `${course.progress}%` }}
+                                                    />
+                                                </div>
+                                                <p className="text-xs text-slate-500 font-medium mt-1">
+                                                    {course.completed_lessons} / {course.total_lessons} bài học
+                                                </p>
+                                            </div>
+
+                                            <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm">
+                                                <Play className="w-4 h-4 fill-current" />
+                                                Tiếp tục học
+                                            </div>
+                                        </div>
+                                    </Link>
+                                </motion.div>
                             ))}
                         </div>
                     </div>
-
-                    <div className="flex items-center gap-6">
-                        {role === "student" && (
-                            <div className="flex bg-slate-100 p-1 rounded-full border border-slate-200">
-                                {([["primary", "Tiểu học"], ["secondary", "Trung học"]] as [Level, string][]).map(([l, label]) => (
-                                    <button
-                                        key={l}
-                                        onClick={() => setLevel(l)}
-                                        className={cn(
-                                            "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer",
-                                            level === l ? (l === "primary" ? "bg-purple-600 text-white" : "bg-cyan-600 text-white") : "text-slate-400"
-                                        )}
-                                    >
-                                        {label}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-
-                        <div className="flex items-center gap-4">
-                            <button className="relative p-2 hover:bg-slate-100 rounded-full text-slate-500 cursor-pointer">
-                                <Bell className="w-5 h-5" />
-                                <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
-                            </button>
-                            <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
-                                <div className="text-right hidden sm:block">
-                                    <p className="text-xs font-bold text-slate-900">Bảo Nguyễn</p>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Lớp {level === 'primary' ? '4' : '8'}</p>
-                                </div>
-                                <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden ring-2 ring-white shadow-sm">
-                                    <UserCircle className="w-full h-full text-slate-400" />
-                                </div>
-                            </div>
+                ) : (
+                    <div className="text-center py-12">
+                        <div className="w-24 h-24 bg-slate-100 rounded-full mx-auto flex items-center justify-center mb-6">
+                            <BookOpen className="w-12 h-12 text-slate-400" />
                         </div>
+                        <h3 className="text-2xl font-adaptive-display font-bold text-slate-900 mb-2">
+                            Bắt đầu học ngay!
+                        </h3>
+                        <p className="text-slate-600 font-medium mb-6">
+                            Khám phá các khóa học và bắt đầu hành trình học tập của bạn.
+                        </p>
+                        <Link href="/courses">
+                            <button className="px-8 py-4 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-2xl shadow-xl shadow-indigo-500/30 transition-all">
+                                Khám phá khóa học
+                            </button>
+                        </Link>
                     </div>
-                </header>
-
-                {/* Scrollable Viewport */}
-                <div className="flex-1 overflow-y-auto bg-brand-bg/50">
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={`${activeTab}-${role}-${level}`}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.4, ease: "easeOut" }}
-                            className="p-8"
-                        >
-                            {activeTab === "map" && <KnowledgeMap level={level} points={mathPoints} />}
-                            {activeTab === "lesson" && <LessonTemplate level={level} />}
-                            {activeTab === "tracker" && <div className="max-w-5xl mx-auto"><MasteryTracker level={level} /></div>}
-                            {activeTab === "diagnostic" && <DiagnosticInterface level={level} />}
-                            {activeTab === "management" && role === "tutor" && <div className="max-w-6xl mx-auto"><TutorDashboard /></div>}
-                            {activeTab === "management" && role === "parent" && <ParentView />}
-                        </motion.div>
-                    </AnimatePresence>
-                </div>
-            </main>
+                )}
+            </div>
         </div>
-    );
+    )
 }

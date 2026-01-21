@@ -9,7 +9,7 @@ function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
-interface SubjectMastery {
+export interface SubjectMastery {
     subject: string;
     totalPoints: number;
     mastered: number;
@@ -17,18 +17,7 @@ interface SubjectMastery {
     exploring: number;
 }
 
-const subjects: SubjectMastery[] = [
-    { subject: "Toán học", totalPoints: 120, mastered: 45, practicing: 30, exploring: 15 },
-    { subject: "Ngữ văn", totalPoints: 85, mastered: 60, practicing: 10, exploring: 5 },
-];
-
-export default function MasteryTracker({
-    level = "primary"
-}: {
-    level?: "primary" | "secondary"
-}) {
-    const isPrimary = level === "primary";
-
+export default function MasteryTracker({ subjects = [] }: { subjects?: SubjectMastery[] }) {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -46,10 +35,7 @@ export default function MasteryTracker({
                     return (
                         <div
                             key={s.subject}
-                            className={cn(
-                                "bg-white p-6 border border-slate-200 shadow-sm",
-                                isPrimary ? "rounded-primary" : "rounded-secondary"
-                            )}
+                            className="bg-white p-6 border border-slate-200 shadow-sm rounded-[32px]"
                         >
                             <div className="flex justify-between items-start mb-4">
                                 <div>

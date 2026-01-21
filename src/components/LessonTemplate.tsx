@@ -31,12 +31,10 @@ const steps: Step[] = [
 ];
 
 export default function LessonTemplate({
-    level = "primary",
     subject = "math",
     title = "Phép cộng có nhớ",
     content
 }: {
-    level?: "primary" | "secondary";
     subject?: "math" | "language";
     title?: string;
     content?: {
@@ -49,25 +47,18 @@ export default function LessonTemplate({
     const [activeStep, setActiveStep] = useState<Step["id"]>("concept");
 
     const currentStepIndex = steps.findIndex(s => s.id === activeStep);
-    const isPrimary = level === "primary";
 
     return (
-        <div
-            data-level={level}
-            className="max-w-4xl mx-auto p-6 space-y-8"
-        >
+        <div className="max-w-4xl mx-auto p-6 space-y-8">
             {/* Header */}
             <div className="flex flex-col space-y-2">
                 <span className={cn(
                     "text-sm font-bold uppercase tracking-wider px-3 py-1 rounded-full w-fit",
                     subject === "math" ? "bg-indigo-100 text-indigo-700" : "bg-rose-100 text-rose-700"
                 )}>
-                    {subject === "math" ? "Toán học" : "Ngữ văn"} • {level === "primary" ? "Cấp Tiểu học" : "Cấp Trung học"}
+                    {subject === "math" ? "Toán học" : "Ngữ văn"} • Bài học cốt lõi
                 </span>
-                <h1 className={cn(
-                    "text-3xl md:text-4xl font-adaptive-display",
-                    isPrimary ? "text-slate-900" : "text-slate-800"
-                )}>
+                <h1 className="text-3xl md:text-4xl font-adaptive-display text-slate-900">
                     {title}
                 </h1>
             </div>
@@ -109,10 +100,7 @@ export default function LessonTemplate({
             </div>
 
             {/* Content Area */}
-            <div className={cn(
-                "bg-white p-8 border border-slate-200 min-h-[400px] transition-all duration-500",
-                isPrimary ? "rounded-primary shadow-soft" : "rounded-secondary shadow-sm"
-            )}>
+            <div className="bg-white p-8 border border-slate-200 min-h-[400px] transition-all duration-500 rounded-[32px] shadow-soft">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={activeStep}
@@ -205,8 +193,7 @@ export default function LessonTemplate({
                     }}
                     disabled={currentStepIndex === 0}
                     className={cn(
-                        "flex items-center gap-2 px-6 py-3 font-bold transition-all cursor-pointer",
-                        isPrimary ? "rounded-full" : "rounded-lg",
+                        "flex items-center gap-2 px-6 py-3 font-bold transition-all cursor-pointer rounded-full",
                         currentStepIndex === 0 ? "text-slate-300 cursor-not-allowed" : "text-slate-600 hover:bg-slate-100"
                     )}
                 >
@@ -219,8 +206,7 @@ export default function LessonTemplate({
                         if (next) setActiveStep(next.id);
                     }}
                     className={cn(
-                        "flex items-center gap-2 px-8 py-3 font-bold text-white transition-all shadow-md hover:shadow-lg cursor-pointer",
-                        isPrimary ? "rounded-full" : "rounded-lg",
+                        "flex items-center gap-2 px-8 py-3 font-bold text-white transition-all shadow-md hover:shadow-lg cursor-pointer rounded-full",
                         subject === "math" ? "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200" : "bg-rose-600 hover:bg-rose-700 shadow-rose-200"
                     )}
                 >

@@ -17,13 +17,8 @@ function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
-export default function DiagnosticInterface({
-    level = "primary"
-}: {
-    level?: "primary" | "secondary"
-}) {
+export default function DiagnosticInterface() {
     const [started, setStarted] = useState(false);
-    const isPrimary = level === "primary";
 
     return (
         <div className="min-h-[600px] flex items-center justify-center p-6">
@@ -34,10 +29,7 @@ export default function DiagnosticInterface({
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 1.05 }}
-                        className={cn(
-                            "max-w-xl w-full bg-white p-8 border border-slate-200 shadow-soft text-center space-y-8",
-                            isPrimary ? "rounded-primary" : "rounded-secondary"
-                        )}
+                        className="max-w-xl w-full bg-white p-8 border border-slate-200 shadow-soft text-center space-y-8 rounded-[32px]"
                     >
                         <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto">
                             <ClipboardCheck className="w-10 h-10" />
@@ -65,10 +57,7 @@ export default function DiagnosticInterface({
 
                         <button
                             onClick={() => setStarted(true)}
-                            className={cn(
-                                "w-full py-4 px-8 bg-blue-600 text-white font-bold text-lg flex items-center justify-center gap-2 group transition-all hover:bg-blue-700 shadow-xl shadow-blue-100 cursor-pointer",
-                                isPrimary ? "rounded-full" : "rounded-lg"
-                            )}
+                            className="w-full py-4 px-8 bg-blue-600 text-white font-bold text-lg flex items-center justify-center gap-2 group transition-all hover:bg-blue-700 shadow-xl shadow-blue-100 cursor-pointer rounded-full"
                         >
                             Bắt đầu Chẩn đoán <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </button>
@@ -78,10 +67,7 @@ export default function DiagnosticInterface({
                         key="question"
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className={cn(
-                            "max-w-2xl w-full bg-white p-10 border border-slate-200 shadow-soft space-y-10",
-                            isPrimary ? "rounded-primary" : "rounded-secondary"
-                        )}
+                        className="max-w-2xl w-full bg-white p-10 border border-slate-200 shadow-soft space-y-10 rounded-[32px]"
                     >
                         {/* Progress Header */}
                         <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -108,10 +94,7 @@ export default function DiagnosticInterface({
                             {["70 miếng", "80 miếng", "85 miếng", "90 miếng"].map((option, i) => (
                                 <button
                                     key={i}
-                                    className={cn(
-                                        "p-6 text-left border-2 border-slate-100 hover:border-blue-500 hover:bg-blue-50 transition-all group font-bold text-slate-700 flex items-center justify-between cursor-pointer",
-                                        isPrimary ? "rounded-primary" : "rounded-secondary"
-                                    )}
+                                    className="p-6 text-left border-2 border-slate-100 hover:border-blue-500 hover:bg-blue-50 transition-all group font-bold text-slate-700 flex items-center justify-between cursor-pointer rounded-[24px]"
                                 >
                                     {option}
                                     <div className="w-6 h-6 rounded-full border-2 border-slate-200 group-hover:border-blue-500 flex items-center justify-center">
