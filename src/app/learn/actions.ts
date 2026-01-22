@@ -125,6 +125,30 @@ export async function updateLessonProgress(
         return { error: error.message }
     }
 
+    // --- Knowledge Engine Hook ---
+    // If completed, verify if this triggers any node mastery
+    if (status === 'completed') {
+        try {
+            const { GraphEngine } = await import('@/lib/graph-engine');
+            const engine = new GraphEngine(supabase);
+
+            // Find which node(s) this lesson belongs to
+            const { data: mappings } = await supabase
+                .from('lesson_to_node')
+                .select('node_id')
+                .eq('lesson_id', lessonId);
+
+            if (mappings) {
+                for (const m of mappings) {
+                    await engine.checkNodeMastery(user.id, m.node_id);
+                }
+            }
+        } catch (e) {
+            console.error('GraphEngine Check Failed:', e);
+            // Don't fail the request request just because graph update failed
+        }
+    }
+
     revalidatePath('/courses')
     revalidatePath('/learn')
 

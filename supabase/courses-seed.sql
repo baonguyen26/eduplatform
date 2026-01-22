@@ -30,7 +30,8 @@ INSERT INTO public.courses (id, title, description, thumbnail_url, subject, grad
     'english',
     'primary-5',
     TRUE
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- Insert Modules for Course 1 (Math)
 INSERT INTO public.modules (id, course_id, title, description, order_index) VALUES
@@ -47,7 +48,8 @@ INSERT INTO public.modules (id, course_id, title, description, order_index) VALU
     'Chương 2: Phép nhân và chia',
     'Bảng nhân và chia cơ bản',
     2
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- Insert Lessons for Math Course
 INSERT INTO public.lessons (id, course_id, module_id, title, content, video_url, duration, order_index) VALUES
@@ -92,7 +94,8 @@ INSERT INTO public.lessons (id, course_id, module_id, title, content, video_url,
     'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
     360,
     4
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- Insert Lessons for Science Course (No modules)
 INSERT INTO public.lessons (id, course_id, module_id, title, content, video_url, duration, order_index) VALUES
@@ -125,7 +128,8 @@ INSERT INTO public.lessons (id, course_id, module_id, title, content, video_url,
     'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
     340,
     3
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- Insert Lessons for English Course
 INSERT INTO public.lessons (id, course_id, module_id, title, content, video_url, duration, order_index) VALUES
@@ -148,4 +152,5 @@ INSERT INTO public.lessons (id, course_id, module_id, title, content, video_url,
     'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
     280,
     2
-);
+)
+ON CONFLICT (id) DO NOTHING;

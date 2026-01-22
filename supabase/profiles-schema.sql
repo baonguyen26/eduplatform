@@ -3,17 +3,23 @@
 -- =====================================================
 
 -- Create profiles table
+-- Create profiles table (if not exists)
 CREATE TABLE IF NOT EXISTS public.profiles (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    role TEXT CHECK (role IN ('student', 'parent')),
-    full_name TEXT,
-    grade_level TEXT,
-    children_ids TEXT[],
-    avatar_url TEXT,
-    onboarding_completed BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE
 );
+
+-- Idempotent schema updates (add columns if they don't exist)
+DO $$
+BEGIN
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role TEXT CHECK (role IN ('student', 'parent'));
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS full_name TEXT;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS grade_level TEXT;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS children_ids TEXT[];
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+END $$;
 
 -- =====================================================
 -- ROW LEVEL SECURITY (RLS)
@@ -23,16 +29,19 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Users can view their own profile
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "Users can view own profile"
     ON public.profiles FOR SELECT
     USING (auth.uid() = id);
 
 -- Users can insert their own profile
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
 CREATE POLICY "Users can insert own profile"
     ON public.profiles FOR INSERT
     WITH CHECK (auth.uid() = id);
 
 -- Users can update their own profile
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile"
     ON public.profiles FOR UPDATE
     USING (auth.uid() = id);
@@ -41,8 +50,8 @@ CREATE POLICY "Users can update own profile"
 -- INDEXES FOR PERFORMANCE
 -- =====================================================
 
-CREATE INDEX idx_profiles_role ON public.profiles(role);
-CREATE INDEX idx_profiles_onboarding ON public.profiles(onboarding_completed);
+CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);
+CREATE INDEX IF NOT EXISTS idx_profiles_onboarding ON public.profiles(onboarding_completed);
 
 -- =====================================================
 -- FUNCTION: Auto-create profile on user signup

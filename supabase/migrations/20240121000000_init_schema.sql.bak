@@ -1,0 +1,135 @@
+
+-- Create enum for user roles (Idempotent)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+        CREATE TYPE public.user_role AS ENUM ('student', 'parent', 'tutor');
+    END IF;
+END $$;
+
+-- Create profiles table (extends auth.users)
+-- HANDLED BY profiles-schema.sql
+-- CREATE TABLE IF NOT EXISTS public.profiles (
+--   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+--   role user_role DEFAULT 'student',
+--   full_name TEXT,
+--   avatar_url TEXT,
+--   preferences JSONB DEFAULT '{}', -- Store Spark/Focus/Scholar mode here
+--   created_at TIMESTAMPTZ DEFAULT NOW(),
+--   updated_at TIMESTAMPTZ DEFAULT NOW()
+-- );
+
+-- RLS for profiles
+-- ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+-- DROP POLICY IF EXISTS "Users can view their own profile" ON public.profiles;
+-- CREATE POLICY "Users can view their own profile" 
+--   ON public.profiles FOR SELECT 
+--   USING (auth.uid() = id);
+
+-- DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
+-- CREATE POLICY "Users can update their own profile" 
+--   ON public.profiles FOR UPDATE 
+--   USING (auth.uid() = id);
+
+-- Create subjects table
+CREATE TABLE IF NOT EXISTS public.subjects (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  icon TEXT, -- Lucide icon name or URL
+  color TEXT, -- Hex code or tailwind class
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.subjects ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public read access for subjects" ON public.subjects;
+CREATE POLICY "Public read access for subjects" 
+  ON public.subjects FOR SELECT 
+  TO authenticated, anon 
+  USING (true);
+
+-- Create topics table
+CREATE TABLE IF NOT EXISTS public.topics (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  subject_id UUID REFERENCES public.subjects(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  description TEXT,
+  "position" INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(subject_id, slug)
+);
+
+ALTER TABLE public.topics ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public read access for topics" ON public.topics;
+CREATE POLICY "Public read access for topics" 
+  ON public.topics FOR SELECT 
+  TO authenticated, anon 
+  USING (true);
+
+-- Knowledge Nodes and Edges are handled by 20260122234500_knowledge_graph.sql
+
+-- Create user_progress table
+-- Note: This might conflict with courses-schema user_progress if not careful.
+-- But standard postgres table creation with IF NOT EXISTS will just skip if it exists.
+-- courses-schema defines it slightly differently (lesson_id vs topic_id).
+-- We should ensure they are compatible or choose one.
+-- courses-schema uses lesson_id. init_schema uses topic_id.
+-- Let's allow BOTH to coexist by ALTERING if needed.
+CREATE TABLE IF NOT EXISTS public.user_progress (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE
+);
+
+DO $$
+BEGIN
+    ALTER TABLE public.user_progress ADD COLUMN IF NOT EXISTS topic_id UUID REFERENCES public.topics(id) ON DELETE CASCADE;
+    ALTER TABLE public.user_progress ADD COLUMN IF NOT EXISTS mastery_score INTEGER DEFAULT 0;
+    ALTER TABLE public.user_progress ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'locked';
+    ALTER TABLE public.user_progress ADD COLUMN IF NOT EXISTS last_accessed TIMESTAMPTZ DEFAULT NOW();
+    ALTER TABLE public.user_progress ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+    
+    -- Constraint might fail if already exists
+    -- ALTER TABLE public.user_progress ADD UNIQUE (user_id, topic_id);
+END $$;
+
+ALTER TABLE public.user_progress ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own progress" ON public.user_progress;
+CREATE POLICY "Users can view own progress" 
+  ON public.user_progress FOR SELECT 
+  USING (auth.uid() = user_id);
+
+-- This policy might conflict with courses-schema policy names if they are identical.
+-- courses-schema uses "Users can view their own progress" (their) vs "Users can view own progress" (own).
+-- Different names -> Both created -> OR condition usually?
+-- Actually, multiple policies are OR'ed. So it's fine.
+
+DROP POLICY IF EXISTS "Users can update own progress" ON public.user_progress;
+CREATE POLICY "Users can update own progress" 
+  ON public.user_progress FOR UPDATE 
+  USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert own progress" ON public.user_progress;
+CREATE POLICY "Users can insert own progress" 
+  ON public.user_progress FOR INSERT 
+  WITH CHECK (auth.uid() = user_id);
+
+-- Function to handle new user signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, full_name, avatar_url)
+  VALUES (new.id, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url');
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger for new user
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();

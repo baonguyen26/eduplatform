@@ -1,130 +1,175 @@
 "use client";
 
-import React from "react";
-import { motion } from "framer-motion";
-import {
-    CheckCircle2,
-    Star,
-    Lock,
-} from "lucide-react";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import React, { useEffect, useState } from "react";
+import { createClient } from "@/utils/supabase/client";
+import MasteryGraph, { GraphNode, GraphEdge, GradeLevel } from "./MasteryGraph";
+import ConceptModal from "./ConceptModal";
 
-function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
+export default function KnowledgeMap() {
+    const supabase = createClient();
+    const [nodes, setNodes] = useState<GraphNode[]>([]);
+    const [edges, setEdges] = useState<GraphEdge[]>([]);
+    const [gradeLevel, setGradeLevel] = useState<string>("primary-1");
+    const [userProfile, setUserProfile] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
 
-type MasteryState = "unseen" | "exploring" | "practicing" | "mastered";
+    // Modal State
+    const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [nodeLessons, setNodeLessons] = useState<any[]>([]);
 
-interface KnowledgePoint {
-    id: string;
-    title: string;
-    state: MasteryState;
-    prerequisites?: string[];
-    position?: { x: number; y: number };
-}
+    useEffect(() => {
+        async function fetchData() {
+            setLoading(true);
 
-const masteryColors: Record<MasteryState, string> = {
-    unseen: "bg-slate-200 text-slate-400 border-slate-300",
-    exploring: "bg-amber-400 text-white border-amber-500 shadow-amber-100",
-    practicing: "bg-blue-500 text-white border-blue-600 shadow-blue-100",
-    mastered: "bg-emerald-600 text-white border-emerald-700 shadow-emerald-100",
-};
+            // 1. Get User & Profile
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                setLoading(false);
+                return;
+            }
 
-const stateLabels: Record<MasteryState, string> = {
-    unseen: "Chưa học",
-    exploring: "Đang khám phá",
-    practicing: "Đang luyện tập",
-    mastered: "Đã nắm vững"
-};
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('grade_level')
+                .eq('id', user.id)
+                .single();
 
-export default function KnowledgeMap({
-    points = [],
-}: {
-    points?: KnowledgePoint[];
-}) {
+            if (profile?.grade_level) {
+                setGradeLevel(profile.grade_level);
+                setUserProfile(profile);
+            }
+
+            // 2. Get Nodes & Edges
+            const { data: fetchedNodes } = await supabase
+                .from('knowledge_nodes')
+                .select('*');
+
+            const { data: fetchedEdges } = await supabase
+                .from('knowledge_edges')
+                .select('*');
+
+            // 3. Get Progress
+            const { data: progress } = await supabase
+                .from('user_node_progress')
+                .select('node_id, status, mastery_score')
+                .eq('user_id', user.id);
+
+            // 4. Merge Data
+            const mergedNodes: GraphNode[] = (fetchedNodes || []).map((n: any) => {
+                const p = progress?.find((p: any) => p.node_id === n.id);
+                return {
+                    id: n.id,
+                    title: n.title,
+                    description: n.description,
+                    position: n.position || { x: 0, y: 0 },
+                    status: p?.status || 'unseen',
+                    icon_type: n.icon_type,
+                    // TODO: Calculate lesson completion
+                    completed_lessons: 0,
+                    total_lessons: 0
+                };
+            });
+
+            const formattedEdges: GraphEdge[] = (fetchedEdges || []).map((e: any) => ({
+                id: e.id,
+                from: e.from_node_id,
+                to: e.to_node_id
+            }));
+
+            setNodes(mergedNodes);
+            setEdges(formattedEdges);
+            setLoading(false);
+        }
+
+        fetchData();
+    }, []);
+
+    const handleNodeClick = async (nodeId: string) => {
+        const node = nodes.find(n => n.id === nodeId);
+        if (!node) return;
+
+        setSelectedNode(node);
+        setModalOpen(true);
+        setNodeLessons([]); // Clear previous
+
+        // Fetch connected lessons
+        const { data: linkedLessons } = await supabase
+            .from('lesson_to_node')
+            .select('lesson_id, lessons(id, title, duration)')
+            .eq('node_id', nodeId);
+
+        if (linkedLessons) {
+            // Need to check completion status for these lessons
+            // This is a bit expensive, maybe optimize later
+            const lessons = linkedLessons.map((l: any) => ({
+                id: l.lessons.id,
+                title: l.lessons.title,
+                duration: l.lessons.duration,
+                isCompleted: false // TODO: Fetch boolean from user_progress
+            }));
+            setNodeLessons(lessons);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-[600px] flex items-center justify-center bg-slate-50 rounded-3xl">
+                <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
 
     return (
-        <div className="p-8 bg-brand-bg min-h-screen">
-            <div className="max-w-6xl mx-auto space-y-12">
-                {/* Map Header */}
+        <div className="bg-brand-bg min-h-screen p-8">
+            <div className="max-w-7xl mx-auto space-y-8">
+
+                {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                    <div className="space-y-2">
-                        <h2 className="text-3xl font-adaptive-display text-slate-900 tracking-tight">
-                            Bản đồ Kiến thức: Toán học
-                        </h2>
-                        <p className="text-slate-500 max-w-lg">
-                            Đi theo lộ trình để làm chủ các khái niệm nền tảng. Mỗi điểm dừng là một bước tiến mới trên hành trình chinh phục tri thức!
+                    <div>
+                        <h1 className="text-4xl font-adaptive-display font-extrabold text-slate-900 leading-tight">
+                            Bản đồ <span className="text-indigo-600">Kiến thức</span>
+                        </h1>
+                        <p className="text-slate-500 font-medium text-lg max-w-2xl mt-2">
+                            {gradeLevel.startsWith('primary')
+                                ? "Khám phá thế giới tri thức đầy màu sắc! Mỗi ngôi sao là một bài học mới."
+                                : "Theo dõi lộ trình làm chủ kiến thức của bạn. Xây dựng nền tảng vững chắc."}
                         </p>
                     </div>
 
-                    <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-                        {(["unseen", "exploring", "practicing", "mastered"] as MasteryState[]).map((state) => (
-                            <div key={state} className="flex items-center gap-1.5 px-3 py-1.5">
-                                <div className={cn("w-3 h-3 rounded-full", masteryColors[state].split(" ")[0])} />
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{stateLabels[state]}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Unified Card View (Previously Primary) */}
-                <div className="relative">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 py-12">
-                        {/* Visual connector line background for larger screens */}
-                        <div className="absolute top-1/2 left-0 w-full h-2 bg-slate-200 -z-10 translate-y-[-50%] hidden lg:block opacity-50 rounded-full" />
-
-                        {points.map((point, index) => (
-                            <motion.div
-                                key={point.id}
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                whileInView={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: index * 0.1 }}
-                                className="relative flex flex-col items-center group"
-                            >
-                                <div className={cn(
-                                    "w-32 h-32 rounded-[32px] border-4 flex items-center justify-center transition-all duration-300 relative z-10",
-                                    masteryColors[point.state],
-                                    point.state === "unseen" ? "opacity-50" : "scale-105 shadow-xl hover:scale-110 cursor-pointer"
-                                )}>
-                                    {point.state === "mastered" ? (
-                                        <CheckCircle2 className="w-16 h-16" />
-                                    ) : point.state === "unseen" ? (
-                                        <Lock className="w-12 h-12" />
-                                    ) : (
-                                        <Star className="w-16 h-16 animate-pulse" />
-                                    )}
-
-                                    {/* Step Number */}
-                                    <div className="absolute -top-4 -right-4 bg-white text-slate-900 px-3 py-1 rounded-full text-xs font-bold border-2 border-slate-900 shadow-[2px_2px_0px_rgba(0,0,0,1)]">
-                                        {index + 1}
-                                    </div>
-                                </div>
-
-                                <div className="mt-6 text-center space-y-1">
-                                    <h3 className="text-xl font-adaptive-display text-slate-800">{point.title}</h3>
-                                    <button className="text-sm font-bold text-blue-600 hover:underline cursor-pointer">
-                                        Bắt đầu Khám phá →
-                                    </button>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Legend / Stats Footer */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {[
-                        { label: "Kiến thức Đã vững", value: points.filter(p => p.state === "mastered").length, color: "text-emerald-600" },
-                        { label: "Đang tích cực học", value: points.filter(p => p.state === "exploring" || p.state === "practicing").length, color: "text-blue-600" },
-                        { label: "Tổng số Điểm kiến thức", value: points.length, color: "text-slate-600" },
-                    ].map((stat, i) => (
-                        <div key={i} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center">
-                            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">{stat.label}</span>
-                            <span className={cn("text-4xl font-adaptive-display mt-1", stat.color)}>{stat.value}</span>
+                    {/* Legend */}
+                    <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-100">
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-slate-200" />
+                            <span className="text-xs font-bold text-slate-500">Chưa học</span>
                         </div>
-                    ))}
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-amber-400" />
+                            <span className="text-xs font-bold text-slate-700">Đang học</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                            <span className="text-xs font-bold text-slate-700">Đã xong</span>
+                        </div>
+                    </div>
                 </div>
+
+                {/* Graph Area */}
+                <MasteryGraph
+                    nodes={nodes}
+                    edges={edges}
+                    gradeLevel={gradeLevel}
+                    onNodeClick={handleNodeClick}
+                />
+
+                {/* Modal */}
+                <ConceptModal
+                    isOpen={modalOpen}
+                    onClose={() => setModalOpen(false)}
+                    node={selectedNode}
+                    lessons={nodeLessons}
+                    gradeLevel={gradeLevel}
+                />
             </div>
         </div>
     );
