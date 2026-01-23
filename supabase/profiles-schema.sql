@@ -19,6 +19,12 @@ BEGIN
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE;
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+    
+    -- Gamification Columns
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS xp INTEGER DEFAULT 0;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS streak_current INTEGER DEFAULT 0;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS streak_longest INTEGER DEFAULT 0;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS last_activity_date DATE; -- For streak calculation
 END $$;
 
 -- =====================================================

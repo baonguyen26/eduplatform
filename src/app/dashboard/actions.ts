@@ -143,3 +143,18 @@ export async function getUserStats() {
         total_study_time: Math.floor(totalDuration / 60) // Convert to minutes
     }
 }
+
+export async function getGamificationProfile() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return null
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('xp, streak_current, streak_longest')
+        .eq('id', user.id)
+        .single()
+
+    return profile
+}

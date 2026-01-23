@@ -9,6 +9,9 @@ import { ArrowLeft, CheckCircle2, X } from 'lucide-react'
 import Link from 'next/link'
 import confetti from 'canvas-confetti'
 import ReactMarkdown from 'react-markdown'
+import { RichVideoPlayer } from '@/components/learn/RichVideoPlayer'
+import { QuizRunner } from '@/components/learn/QuizRunner'
+import { getQuizForLesson, submitQuizAttempt } from '../actions'
 
 export default function LessonPlayerPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
@@ -17,15 +20,18 @@ export default function LessonPlayerPage({ params }: { params: Promise<{ id: str
     const [courseLessons, setCourseLessons] = useState<LessonWithProgress[]>([])
     const [loading, setLoading] = useState(true)
     const [completing, setCompleting] = useState(false)
+    const [quiz, setQuiz] = useState<any>(null)
 
     useEffect(() => {
         Promise.all([
             getLessonById(id),
-        ]).then(async ([lessonData]) => {
+            getQuizForLesson(id)
+        ]).then(async ([lessonData, quizData]) => {
             if (!lessonData) {
                 notFound()
             }
             setLesson(lessonData)
+            setQuiz(quizData)
 
             // Mark as started if not already
             if (!lessonData.progress || lessonData.progress.status === 'not_started') {
@@ -161,12 +167,19 @@ export default function LessonPlayerPage({ params }: { params: Promise<{ id: str
                         <div className="w-full max-w-6xl">
                             {/* Video Player */}
                             {lesson.video_url && (
-                                <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl mb-8">
-                                    <iframe
-                                        src={lesson.video_url.replace('watch?v=', 'embed/')}
-                                        className="w-full h-full"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowFullScreen
+                                <div className="mb-8">
+                                    <RichVideoPlayer
+                                        url={lesson.video_url}
+                                        title={lesson.title}
+                                        onProgress={(progress: number) => {
+                                            if (progress > 0.8 && !isCompleted) {
+                                                // Pre-mark client side if needed, or rely on explicit button
+                                            }
+                                        }}
+                                        onComplete={() => {
+                                            // Auto-complete logic can go here if we want auto-completion
+                                            // For now, let's just let the user click the button to feel accomplished
+                                        }}
                                     />
                                 </div>
                             )}
@@ -182,13 +195,33 @@ export default function LessonPlayerPage({ params }: { params: Promise<{ id: str
                                     <ReactMarkdown>{lesson.content}</ReactMarkdown>
                                 </div>
                             )}
+
+                            {/* Quiz Section */}
+                            {quiz && isCompleted && (
+                                <div className="mt-12 animate-fade-in-up">
+                                    <QuizRunner
+                                        quizId={quiz.id}
+                                        title={quiz.title}
+                                        questions={quiz.questions || []}
+                                        passingScore={quiz.passing_score}
+                                        onComplete={async (score, passed, answers) => {
+                                            await submitQuizAttempt(quiz.id, score, passed, answers)
+                                            if (passed) {
+                                                router.refresh()
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
 
                 {/* Sidebar */}
-                <div className="w-96 hidden lg:block">
-                    <LessonSidebar lessons={courseLessons} currentLessonId={id} />
+                <div className="w-96 hidden lg:block p-4">
+                    <div className="h-full rounded-3xl bg-white/40 backdrop-blur-xl border border-white/60 shadow-[inset_4px_4px_8px_rgba(255,255,255,0.5),inset_-4px_-4px_8px_rgba(0,0,0,0.05)] overflow-hidden">
+                        <LessonSidebar lessons={courseLessons} currentLessonId={id} />
+                    </div>
                 </div>
             </div>
         </div>

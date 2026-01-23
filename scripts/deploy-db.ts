@@ -28,6 +28,7 @@ async function deploy() {
     const filesToRun = [
         'supabase/profiles-schema.sql',
         'supabase/courses-schema.sql',
+        'supabase/gamification-schema.sql',
     ];
 
     // Find all migrations in supabase/migrations

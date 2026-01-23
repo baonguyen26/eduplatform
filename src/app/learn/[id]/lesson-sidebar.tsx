@@ -12,7 +12,7 @@ interface LessonSidebarProps {
 
 export function LessonSidebar({ lessons, currentLessonId }: LessonSidebarProps) {
     return (
-        <div className="h-full bg-white/90 backdrop-blur-xl border-l-4 border-white ring-4 ring-blue-50 overflow-y-auto">
+        <div className="h-full overflow-y-auto custom-scrollbar p-2">
             <div className="p-6">
                 <h3 className="text-xl font-adaptive-display font-bold text-slate-900 mb-4">
                     Danh sách bài học
@@ -30,22 +30,23 @@ export function LessonSidebar({ lessons, currentLessonId }: LessonSidebarProps) 
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ duration: 0.3, delay: index * 0.05 }}
                                     className={`
-                                        group p-4 rounded-2xl transition-all cursor-pointer
+                                        group p-4 rounded-2xl transition-all cursor-pointer mb-3 mx-2
+                                        shadow-[5px_5px_10px_#b8b9be,-5px_-5px_10px_#ffffff]
                                         ${isActive
-                                            ? 'bg-indigo-50 ring-2 ring-indigo-400 shadow-lg shadow-indigo-200'
+                                            ? 'bg-indigo-50 border border-white/50 translate-x-1'
                                             : isCompleted
-                                                ? 'bg-green-50 border-2 border-green-200 hover:shadow-md'
-                                                : 'bg-slate-50 border-2 border-slate-200 hover:border-indigo-300 hover:shadow-md'
+                                                ? 'bg-green-50 border border-white/50'
+                                                : 'bg-white border border-white/50 hover:-translate-y-1 hover:shadow-[6px_6px_12px_#b8b9be,-6px_-6px_12px_#ffffff]'
                                         }
                                     `}
                                 >
                                     <div className="flex items-center gap-3">
                                         {/* Status Icon */}
                                         <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${isCompleted
-                                                ? 'bg-green-500'
-                                                : isActive
-                                                    ? 'bg-indigo-500'
-                                                    : 'bg-slate-300 group-hover:bg-indigo-200'
+                                            ? 'bg-green-500'
+                                            : isActive
+                                                ? 'bg-indigo-500'
+                                                : 'bg-slate-300 group-hover:bg-indigo-200'
                                             }`}>
                                             {isCompleted ? (
                                                 <CheckCircle2 className="w-4 h-4 text-white" />
@@ -59,10 +60,10 @@ export function LessonSidebar({ lessons, currentLessonId }: LessonSidebarProps) 
                                         {/* Lesson Info */}
                                         <div className="flex-1 min-w-0">
                                             <p className={`text-sm font-bold truncate ${isActive
-                                                    ? 'text-indigo-700'
-                                                    : isCompleted
-                                                        ? 'text-green-700'
-                                                        : 'text-slate-700 group-hover:text-indigo-600'
+                                                ? 'text-indigo-700'
+                                                : isCompleted
+                                                    ? 'text-green-700'
+                                                    : 'text-slate-700 group-hover:text-indigo-600'
                                                 }`}>
                                                 {lesson.title}
                                             </p>

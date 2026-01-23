@@ -17,16 +17,27 @@ export const metadata: Metadata = {
   description: "Foundational knowledge and core mastery platform.",
 };
 
-export default function RootLayout({
+import { getGamificationProfile } from "@/app/dashboard/actions";
+import { GamificationHUD } from "@/components/gamification/GamificationHUD";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const gamificationProfile = await getGamificationProfile();
+
   return (
     <html lang="en">
       <body
         className={`${quicksand.variable} ${baloo2.variable} antialiased`}
       >
+        {gamificationProfile && (
+          <GamificationHUD
+            xp={gamificationProfile.xp || 0}
+            streak={gamificationProfile.streak_current || 0}
+          />
+        )}
         {children}
       </body>
     </html>

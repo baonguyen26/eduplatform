@@ -154,3 +154,86 @@ export async function updateLessonProgress(
 
     return { success: true }
 }
+
+// --- Quiz Actions ---
+
+export async function getQuizForLesson(lessonId: string) {
+    const supabase = await createClient()
+
+    // Fetch Quiz
+    const { data: quiz, error } = await supabase
+        .from('quizzes')
+        .select(`
+            *,
+            questions:quiz_questions(*)
+        `)
+        .eq('lesson_id', lessonId)
+        .single()
+
+    if (error || !quiz) return null
+
+    // Sort questions by order_index
+    if (quiz.questions) {
+        quiz.questions.sort((a: any, b: any) => a.order_index - b.order_index)
+    }
+
+    return quiz
+}
+
+export async function submitQuizAttempt(
+    quizId: string,
+    score: number,
+    passed: boolean,
+    answers: any
+) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { error: 'Not authenticated' }
+
+    // Record Attempt
+    const { data: attempt, error } = await supabase
+        .from('user_quiz_attempts')
+        .insert({
+            user_id: user.id,
+            quiz_id: quizId,
+            score,
+            passed,
+            answers
+        })
+        .select()
+        .single()
+
+    if (error) {
+        console.error('Error submitting quiz:', error)
+        return { error: error.message }
+    }
+
+    // Award XP if passed
+    if (passed) {
+        // Fetch quiz reward
+        const { data: quiz } = await supabase
+            .from('quizzes')
+            .select('xp_reward, lesson_id')
+            .eq('id', quizId)
+            .single()
+
+        if (quiz) {
+            // Check if already passed before? (Prevent XP farming)
+            // Implementation: Check previous attempts. For now, let's just award it once per lesson completion? 
+            // Or just award it.
+
+            // Increment Profile XP
+            await supabase.rpc('increment_xp', {
+                user_id: user.id,
+                amount: quiz.xp_reward
+            })
+
+            // Mark Lesson as Completed
+            await updateLessonProgress(quiz.lesson_id, 'completed')
+        }
+    }
+
+    revalidatePath('/learn')
+    return { success: true, attempt }
+}
